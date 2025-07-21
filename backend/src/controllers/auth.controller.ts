@@ -2,9 +2,9 @@ import { Request, Response } from 'express';
 import prisma from '../prisma/client';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { sendVerificationEmail } from './../services/email.service';
 import { z } from 'zod';
-
+import { sendVerificationEmail } from './../services/email.service';
+// import { sendSMS } from './../services/sms.service';
 const JWT_SECRET = String(process.env.JWT_SECRET);
 if (!JWT_SECRET) throw new Error('JWT_SECRET must be defined');
 
@@ -45,7 +45,7 @@ export async function signup(req: Request, res: Response) {
       email,
       phone,
       password: hashedPassword,
-      emailVerified: false,
+      verified: false,
     },
   });
 
@@ -54,6 +54,8 @@ export async function signup(req: Request, res: Response) {
   });
 
   const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${emailToken}`;
+  // SEND SMS
+  // await sendSMS(createdUser.phone, 'The verification code is 7879');
 
   try {
     await sendVerificationEmail(name, email, verifyUrl);
@@ -86,7 +88,7 @@ export async function login(req: Request, res: Response) {
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res
-        .status(401)
+        .status(400)
         .json({ message: 'Email or password is incorrect' });
     }
 
