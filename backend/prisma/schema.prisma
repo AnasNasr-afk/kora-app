@@ -1,0 +1,145 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "mysql"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+    id               String          @id @default(uuid())
+    phone            String?         @unique
+    email            String?         @unique
+    name             String?
+    password         String
+    verificationCode String?
+    role             UserRole        @default(USER)
+    createdAt        DateTime        @default(now())
+    updatedAt        DateTime        @updatedAt
+    verified         Boolean         @default(false)
+    bookings         Booking[]
+    reviews          Review[]
+    favorites        Favorite[]
+    BookingPlayer    BookingPlayer[]
+
+    @@index([email])
+    @@index([phone])
+    @@map("users")
+}
+
+model Court {
+    id           String   @id @default(cuid())
+    name         String
+    address      String
+    latitude     Float?
+    longitude    Float?
+    pricePerHour Decimal  @db.Decimal(8, 2)
+    maxPlayers   Int
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
+
+    bookings          Booking[]
+    reviews           Review[]
+    images            CourtImage[]
+    favorites         Favorite[]
+    CourtAvailability CourtAvailability[]
+}
+
+model CourtAvailability {
+    id        String   @id @default(cuid())
+    courtId   String
+    date      DateTime
+    startTime DateTime
+    endTime   DateTime
+    isActive  Boolean  @default(true)
+    dayOfWeek Int
+    court     Court    @relation(fields: [courtId], references: [id])
+
+    @@index([courtId, date])
+}
+
+model Booking {
+    id         String          @id @default(cuid())
+    userId     String
+    courtId    String
+    startTime  DateTime
+    endTime    DateTime
+    totalPrice Decimal         @db.Decimal(8, 2)
+    status     BookingStatus   @default(PENDING)
+    createdAt  DateTime        @default(now())
+    maxPlayers Int
+    players    BookingPlayer[]
+    user       User            @relation(fields: [userId], references: [id])
+    court      Court           @relation(fields: [courtId], references: [id])
+    payment    Payment?
+}
+
+model BookingPlayer {
+    id        String  @id @default(uuid())
+    booking   Booking @relation(fields: [bookingId], references: [id])
+    bookingId String
+    user      User    @relation(fields: [userId], references: [id])
+    userId    String
+
+    @@unique([bookingId, userId]) // Prevent duplicate joins
+}
+
+model Review {
+    id        String   @id @default(cuid())
+    userId    String
+    courtId   String
+    rating    Int // 1 to 5
+    comment   String?
+    createdAt DateTime @default(now())
+
+    user  User  @relation(fields: [userId], references: [id])
+    court Court @relation(fields: [courtId], references: [id])
+}
+
+model Favorite {
+    id      String @id @default(cuid())
+    userId  String
+    courtId String
+
+    user  User  @relation(fields: [userId], references: [id])
+    court Court @relation(fields: [courtId], references: [id])
+
+    @@unique([userId, courtId])
+}
+
+model CourtImage {
+    id      String @id @default(cuid())
+    courtId String
+    url     String
+
+    court Court @relation(fields: [courtId], references: [id])
+}
+
+model Payment {
+    id        String        @id @default(cuid())
+    bookingId String        @unique
+    amount    Decimal       @db.Decimal(8, 2)
+    status    PaymentStatus @default(PENDING)
+    createdAt DateTime      @default(now())
+
+    booking Booking @relation(fields: [bookingId], references: [id])
+}
+
+enum BookingStatus {
+    PENDING
+    CONFIRMED
+    CANCELLED
+    COMPLETED
+}
+
+enum PaymentStatus {
+    PENDING
+    PAID
+    FAILED
+}
+
+enum UserRole {
+    USER
+    ADMIN
+}
