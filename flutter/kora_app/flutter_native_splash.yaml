@@ -1,0 +1,7 @@
+flutter_native_splash:
+  color: "#000000"
+  image: assets/images/splashScreen.png
+  fullscreen: true
+
+  android_gravity: fill
+  ios_content_mode: scaleAspectFill
